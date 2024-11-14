@@ -70,27 +70,8 @@ class CostEstimatorApp:
         """
         Convert the uploaded file to a base64 string.
         """
-        # with open(image, "rb") as image_file:
-        # img_bytes = image.read()
-        # base64_image = base64.b64encode(img_bytes).decode('utf-8')
         base64_image = base64.b64encode(image.getvalue()).decode()
         return base64_image
-
-
-def upload_image():
-    # Uploads image and displays image
-    st.sidebar.header("Upload your architecture")
-    uploaded_file = st.sidebar.file_uploader(
-        "Upload your architecture diagram", type=["png", "jpg"]
-    )
-    if uploaded_file is not None:
-        st.write("You uploaded the image below:")
-        display_image = Image.open(uploaded_file)
-        st.image(display_image, use_container_width=True)
-    else:
-        st.write(
-            "Let's estimate your architecture. Upload an image in the sidebar."
-        )  # can we consider drag and drop interface?
 
 
 if __name__ == "__main__":
