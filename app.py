@@ -53,7 +53,7 @@ class CostEstimatorApp:
         display_image = Image.open(uploaded_file)
         st.image(display_image, use_container_width=True)
 
-    def __identify_services(self, image):
+    def __identify_services(self, image: UploadedFile):
         base64_img = self.__convert_uploaded_img_to_base64(image=image)
         identify_service_messages = generate_identify_service_messages(base64_img)
         response = self.__generate_response(messages=identify_service_messages)
