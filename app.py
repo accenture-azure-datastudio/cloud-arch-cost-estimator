@@ -7,7 +7,7 @@ from PIL import Image
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 
 from openai_client import AzureOpenAIClient
-from prompt import generate_identify_service_messages
+from prompt import CostEstimationPrompt
 
 
 class CostEstimatorApp:
@@ -55,9 +55,19 @@ class CostEstimatorApp:
 
     def __identify_services(self, image: UploadedFile):
         base64_img = self.__convert_uploaded_img_to_base64(image=image)
-        identify_service_messages = generate_identify_service_messages(base64_img)
-        response = self.__generate_response(messages=identify_service_messages)
-        return response
+
+        prompt_generator = CostEstimationPrompt(base64_image=base64_img)
+        identify_service_prompt = prompt_generator.generate_identify_service_prompt()
+        identify_service_response = self.__generate_response(
+            messages=identify_service_prompt
+        )
+        cost_estimation_prompt = prompt_generator.generate_cost_estimation_prompt(
+            previous_response=identify_service_response
+        )
+        cost_estimation_response = self.__generate_response(
+            messages=cost_estimation_prompt
+        )
+        return cost_estimation_response
 
     def __generate_response(self, messages: List[Dict[str, Any]]) -> str:
         return self.openai_client.generate_response(messages=messages)
