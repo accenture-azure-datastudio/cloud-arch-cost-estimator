@@ -30,7 +30,9 @@ class AzureOpenAIClient:
         except Exception as e:
             raise RuntimeError(f"Failed to create AzureOpenAI client: {e}")
 
-    def generate_response(self, messages: List[Dict[str, Any]]) -> str:
+    def generate_response(
+        self, messages: List[Dict[str, Any]], response_format=None
+    ) -> str:
         """
         Generate a response from the Azure OpenAI model based on the given prompt.
         """
@@ -38,6 +40,7 @@ class AzureOpenAIClient:
             response = self.client.chat.completions.create(
                 model=self.deployment,
                 messages=messages,
+                response_format=response_format,
             )
             response_content = response.choices[0].message.content
             return response_content
