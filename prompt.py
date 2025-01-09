@@ -1,4 +1,13 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
+
+from pydantic import BaseModel
+
+
+class CostEstimate(BaseModel):
+    services: str
+    assumptions: list[str]
+    price_rate: str
+    monthly_cost_estimate: str
 
 
 class CostEstimationPrompt:
@@ -18,7 +27,7 @@ class CostEstimationPrompt:
         }
         return system_prompt
 
-    def generate_identify_service_prompt(self) -> List[Dict[str, Any]]:
+    def generate_identify_service_prompt(self) -> Tuple[List[Dict[str, Any]], None]:
         identify_service_prompt = [
             self.system_prompt,
             {
@@ -40,11 +49,12 @@ class CostEstimationPrompt:
             },
         ]
         self.identify_service_prompt = identify_service_prompt
-        return self.identify_service_prompt
+        response_format = None
+        return self.identify_service_prompt, response_format
 
     def generate_cost_estimation_prompt(
         self, previous_response: str
-    ) -> List[Dict[str, Any]]:
+    ) -> Tuple[List[Dict[str, Any]], CostEstimate]:
         assistant_response = {
             "role": "assistant",
             "content": [
@@ -64,11 +74,12 @@ class CostEstimationPrompt:
                     "content": [
                         {
                             "type": "text",
-                            "text": "Based on the cloud services identified, use latest pricing information from cloud service providers, provide a monthly cost estimation based on the identified services and quantities, include any assumptions made for each services. For each service, format the output as '**Assumptions** \n**Pricing Rate**\n**3. Monthly Cost**.' Aggregate the total monthly cost for each services in the end.",
+                            "text": "Based on the cloud services identified, use latest pricing information from cloud service providers, provide a monthly cost estimation based on the identified services and quantities, include any assumptions made for each services in details such as compute options, data volume, token estimation and models. Structure the response in JSON object with the two properties: services and total_estimated_monthly_cost, the services has the properties: Service Name, Assumptions, Quantity, Price Rate and Estimated Monthly Cost. The assumptions property is a string separated by \n for each assumption.",
                         }
                     ],
                 },
             ]
         )
         self.cost_estimation_prompt = cost_estimation_prompt
-        return self.cost_estimation_prompt
+        response_format = {"type": "json_object"}
+        return self.cost_estimation_prompt, response_format

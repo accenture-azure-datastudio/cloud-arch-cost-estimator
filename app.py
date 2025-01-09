@@ -1,7 +1,9 @@
 import base64
+import json
 import os
 from typing import Any, Dict, List
 
+import pandas as pd
 import streamlit as st
 from PIL import Image
 from streamlit.runtime.uploaded_file_manager import UploadedFile
@@ -42,8 +44,8 @@ class CostEstimatorApp:
         if uploaded_file is not None:
             st.write("You uploaded the image below:")
             self.__display_image(uploaded_file=uploaded_file)
-            response = self.__identify_services(image=uploaded_file)
-            self.__display_response(response)
+            response_list = self.__estimate_cost(image=uploaded_file)
+            self.__display_response(response_list)
         else:
             st.write(
                 "Let's estimate your architecture. Upload an image in the sidebar."
@@ -53,28 +55,49 @@ class CostEstimatorApp:
         display_image = Image.open(uploaded_file)
         st.image(display_image, use_container_width=True)
 
-    def __identify_services(self, image: UploadedFile):
+    def __estimate_cost(self, image: UploadedFile):
         base64_img = self.__convert_uploaded_img_to_base64(image=image)
 
         prompt_generator = CostEstimationPrompt(base64_image=base64_img)
-        identify_service_prompt = prompt_generator.generate_identify_service_prompt()
-        identify_service_response = self.__generate_response(
-            messages=identify_service_prompt
+        identify_service_prompt, identify_service_response_format = (
+            prompt_generator.generate_identify_service_prompt()
         )
-        cost_estimation_prompt = prompt_generator.generate_cost_estimation_prompt(
-            previous_response=identify_service_response
+        identify_service_response = self.__generate_response(
+            messages=identify_service_prompt,
+            response_format=identify_service_response_format,
+        )
+        cost_estimation_prompt, cost_estimation_response_format = (
+            prompt_generator.generate_cost_estimation_prompt(
+                previous_response=identify_service_response
+            )
         )
         cost_estimation_response = self.__generate_response(
-            messages=cost_estimation_prompt
+            messages=cost_estimation_prompt,
+            response_format=cost_estimation_response_format,
         )
-        return cost_estimation_response
+        cost_estimation_df, total_estimated_cost = (
+            self.__format_cost_estimation_response(cost_estimation_response)
+        )
+        return [cost_estimation_df, total_estimated_cost]
 
-    def __generate_response(self, messages: List[Dict[str, Any]]) -> str:
-        return self.openai_client.generate_response(messages=messages)
+    def __format_cost_estimation_response(self, json_str) -> pd.DataFrame:
+        json_dict = json.loads(json_str)
+        services_dict = json_dict["services"]
+        total_estimated_cost = json_dict["total_estimated_monthly_cost"]
+        df = pd.DataFrame.from_records(services_dict)
+        return df, total_estimated_cost
 
-    def __display_response(self, response: str):
-        st.subheader("Azure OpenAI Response")
-        st.write(response)
+    def __generate_response(
+        self, messages: List[Dict[str, Any]], response_format=None
+    ) -> str:
+        return self.openai_client.generate_response(
+            messages=messages, response_format=response_format
+        )
+
+    def __display_response(self, response_list: List[Any]):
+        st.subheader("Estimated Cost")
+        for response in response_list:
+            st.write(response)
 
     def __convert_uploaded_img_to_base64(self, image: UploadedFile) -> str:
         """
