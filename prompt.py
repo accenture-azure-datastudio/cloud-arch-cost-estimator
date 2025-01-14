@@ -1,4 +1,13 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
+
+from pydantic import BaseModel
+
+
+class CostEstimate(BaseModel):
+    services: str
+    assumptions: list[str]
+    price_rate: str
+    monthly_cost_estimate: str
 
 
 class CostEstimationPrompt:
@@ -18,7 +27,7 @@ class CostEstimationPrompt:
         }
         return system_prompt
 
-    def generate_identify_service_prompt(self) -> List[Dict[str, Any]]:
+    def generate_identify_service_prompt(self) -> Tuple[List[Dict[str, Any]], None]:
         identify_service_prompt = [
             self.system_prompt,
             {
@@ -40,11 +49,12 @@ class CostEstimationPrompt:
             },
         ]
         self.identify_service_prompt = identify_service_prompt
-        return self.identify_service_prompt
+        response_format = None
+        return self.identify_service_prompt, response_format
 
     def generate_cost_estimation_prompt(
         self, previous_response: str
-    ) -> List[Dict[str, Any]]:
+    ) -> Tuple[List[Dict[str, Any]], CostEstimate]:
         assistant_response = {
             "role": "assistant",
             "content": [
@@ -71,8 +81,8 @@ class CostEstimationPrompt:
             ]
         )
         self.cost_estimation_prompt = cost_estimation_prompt
-        return self.cost_estimation_prompt
-
+        response_format = {"type": "json_object"}
+        return self.cost_estimation_prompt, response_format
 
 
 class CloudOptimisationPrompt:
@@ -86,12 +96,12 @@ class CloudOptimisationPrompt:
             "content": [
                 {
                     "type": "text",
-                    "text": '''You are a solution architect. Your goal is to analyze architecture diagrams and consider substitutes of listed cloud resources. Assume that all resources are created in UK and currency is in British Pound. Your tasks include: 
+                    "text": """You are a solution architect. Your goal is to analyze architecture diagrams and consider substitutes of listed cloud resources. Assume that all resources are created in UK and currency is in British Pound. Your tasks include: 
                     1. Identifying the cloud services used in the diagram.
                     2. Determining the quantity of each service if specified. 
                     3. Based on the latest pricing information from cloud service providers, provide a cost estimation based on the identified services and quantities, include any assumptions made for each services.
                     4. Make any sensible assumptions for each services such as compute options, data volume, token estimation, models etc. 
-                    5. Identify the potential substitutes for the identified services and provide a cost estimation based on the substitutes.''',
+                    5. Identify the potential substitutes for the identified services and provide a cost estimation based on the substitutes.""",
                 }
             ],
         }
