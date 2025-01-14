@@ -74,7 +74,7 @@ class CostEstimationPrompt:
                     "content": [
                         {
                             "type": "text",
-                            "text": "Based on the cloud services identified, use latest pricing information from cloud service providers, provide a monthly cost estimation based on the identified services and quantities, include any assumptions made for each services in details such as compute options, data volume, token estimation and models. Structure the response in JSON object with the two properties: services and total_estimated_monthly_cost, the services has the properties: Service Name, Assumptions, Quantity, Price Rate and Estimated Monthly Cost. The assumptions property is a string separated by \n for each assumption.",
+                            "text": "Based on the cloud services identified, use latest pricing information from cloud service providers, provide a monthly cost estimation based on the identified services and quantities, include any assumptions made for each services. For each service, format the output as '**Assumptions** \n**Pricing Rate**\n**3. Monthly Cost**.' Aggregate the total monthly cost for each services in the end.",
                         }
                     ],
                 },
@@ -83,7 +83,6 @@ class CostEstimationPrompt:
         self.cost_estimation_prompt = cost_estimation_prompt
         response_format = {"type": "json_object"}
         return self.cost_estimation_prompt, response_format
-
 
 
 class CloudOptimisationPrompt:
@@ -97,12 +96,12 @@ class CloudOptimisationPrompt:
             "content": [
                 {
                     "type": "text",
-                    "text": '''You are a solution architect. Your goal is to analyze architecture diagrams and consider substitutes of listed cloud resources. Assume that all resources are created in UK and currency is in British Pound. Your tasks include: 
+                    "text": """You are a solution architect. Your goal is to analyze architecture diagrams and consider substitutes of listed cloud resources. Assume that all resources are created in UK and currency is in British Pound. Your tasks include: 
                     1. Identifying the cloud services used in the diagram.
                     2. Determining the quantity of each service if specified. 
                     3. Based on the latest pricing information from cloud service providers, provide a cost estimation based on the identified services and quantities, include any assumptions made for each services.
                     4. Make any sensible assumptions for each services such as compute options, data volume, token estimation, models etc. 
-                    5. Identify the potential substitutes for the identified services and provide a cost estimation based on the substitutes.''',
+                    5. Identify the potential substitutes for the identified services and provide a cost estimation based on the substitutes.""",
                 }
             ],
         }
