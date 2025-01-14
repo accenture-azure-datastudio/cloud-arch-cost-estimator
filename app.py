@@ -8,10 +8,10 @@ import streamlit as st
 from PIL import Image
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 
+from menu import menu
 from openai_client import AzureOpenAIClient
 from prompt import CostEstimationPrompt
 
-from menu import menu
 
 class CostEstimatorApp:
     def __init__(self):
@@ -41,10 +41,13 @@ class CostEstimatorApp:
         # Uploads image and displays image
         # st.sidebar.header("Upload your architecture")
         uploaded_file = st.file_uploader(
-            "Upload your architecture diagram and I will estimate the implementation cost.", type=["png", "jpg"]
+            "Upload your architecture diagram and I will estimate the implementation cost.",
+            type=["png", "jpg"],
         )
         if uploaded_file is not None:
-            st.write("You uploaded the image below. Let's estimate the cost of this architecture.")
+            st.write(
+                "You uploaded the image below. Let's estimate the cost of this architecture."
+            )
             self.__display_image(uploaded_file=uploaded_file)
             response_list = self.__estimate_cost(image=uploaded_file)
             self.__display_response(response_list)
@@ -77,17 +80,20 @@ class CostEstimatorApp:
             messages=cost_estimation_prompt,
             response_format=cost_estimation_response_format,
         )
-        cost_estimation_df, total_estimated_cost = (
+        cost_estimation_df, total_estimated_cost_response = (
             self.__format_cost_estimation_response(cost_estimation_response)
         )
-        return [cost_estimation_df, total_estimated_cost]
+        return [cost_estimation_df, total_estimated_cost_response]
 
     def __format_cost_estimation_response(self, json_str) -> pd.DataFrame:
         json_dict = json.loads(json_str)
         services_dict = json_dict["services"]
         total_estimated_cost = json_dict["total_estimated_monthly_cost"]
+        total_estimated_cost_response = (
+            f"Total estimated monthly cost is {total_estimated_cost}"
+        )
         df = pd.DataFrame.from_records(services_dict)
-        return df, total_estimated_cost
+        return df, total_estimated_cost_response
 
     def __generate_response(
         self, messages: List[Dict[str, Any]], response_format=None
