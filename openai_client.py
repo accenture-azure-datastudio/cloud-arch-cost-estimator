@@ -1,6 +1,6 @@
 from typing import Any, Dict, List
 
-from openai import AzureOpenAI
+from openai import AzureOpenAI, Stream
 
 
 class AzureOpenAIClient:
@@ -31,7 +31,7 @@ class AzureOpenAIClient:
             raise RuntimeError(f"Failed to create AzureOpenAI client: {e}")
 
     def generate_response(
-        self, messages: List[Dict[str, Any]], response_format=None
+        self, messages: List[Dict[str, Any]], response_format=None, *args, **kwargs
     ) -> str:
         """
         Generate a response from the Azure OpenAI model based on the given prompt.
@@ -41,8 +41,12 @@ class AzureOpenAIClient:
                 model=self.deployment,
                 messages=messages,
                 response_format=response_format,
+                **kwargs,
             )
-            response_content = response.choices[0].message.content
+            if isinstance(response, Stream):
+                response_content = response
+            else:
+                response_content = response.choices[0].message.content
             return response_content
         except Exception as e:
             raise RuntimeError(f"Failed to generate response: {e}")
