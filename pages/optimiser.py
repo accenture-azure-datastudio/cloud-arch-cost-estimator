@@ -6,10 +6,10 @@ import streamlit as st
 from PIL import Image
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 
+from menu import menu
 from openai_client import AzureOpenAIClient
 from prompt import CloudOptimisationPrompt
 
-from menu import menu
 
 class OptimiserApp:
     def __init__(self):
@@ -25,7 +25,14 @@ class OptimiserApp:
         st.title("Cloud Architecture Optimiser")
         menu()
         self.__show_sidebar()
-        self.__upload_arch_diagram()
+
+        # initialise chat history
+        if "messages" not in st.session_state:
+            st.session_state.messages = []
+
+        uploaded_file_status = self.__upload_arch_diagram()
+        if uploaded_file_status:
+            self.__show_chat()
 
     def __show_sidebar(self):
         st.sidebar.header("Configure your architecture")
@@ -39,17 +46,37 @@ class OptimiserApp:
         # Uploads image and displays image
         # st.sidebar.header("Upload your architecture")
         uploaded_file = st.file_uploader(
-            "Upload your architecture diagram and I will give optimisation recommendations.", type=["png", "jpg"]
+            "Upload your architecture diagram and I will give optimisation recommendations.",
+            type=["png", "jpg"],
         )
-        if uploaded_file is not None:
+        uploaded_file_status = uploaded_file is not None
+        if uploaded_file_status:
             st.write("You uploaded the image below. Let's optimise this architecture.")
             self.__display_image(uploaded_file=uploaded_file)
-            response = self.__identify_services(image=uploaded_file)
-            self.__display_response(response)
+            self.__identify_services(image=uploaded_file)
         else:
-            st.warning(
-                "Upload an image to get started."
-            ) 
+            st.warning("Upload an image to get started.")
+        return uploaded_file_status
+
+    def __show_chat(self):
+        if prompt := st.chat_input("Provide your feedback"):
+            # Add user message to chat history
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            # Display user message in chat message container
+            with st.chat_message("user"):
+                st.markdown(prompt)
+
+            # Display assistant response in chat message container
+            with st.chat_message("assistant"):
+                stream = self.openai_client.generate_response(
+                    messages=[
+                        {"role": m["role"], "content": m["content"]}
+                        for m in st.session_state.messages
+                    ],
+                    stream=True,
+                )
+                response = st.write_stream(stream)
+            st.session_state.messages.append({"role": "assistant", "content": response})
 
     def __display_image(self, uploaded_file: UploadedFile):
         display_image = Image.open(uploaded_file)
@@ -66,17 +93,17 @@ class OptimiserApp:
         optimisation_prompt = prompt_generator.synthesise_optimisation_prompt(
             previous_response=identify_service_response
         )
-        optimisation_response = self.__generate_response(
-            messages=optimisation_prompt
+        optimisation_response = self.__generate_response(messages=optimisation_prompt)
+
+        st.session_state.messages.append(
+            {"role": "assistant", "content": optimisation_response}
         )
-        return optimisation_response
+        with st.chat_message("assistant"):
+            st.markdown("Azure OpenAI Response")
+            st.markdown(optimisation_response)
 
     def __generate_response(self, messages: List[Dict[str, Any]]) -> str:
         return self.openai_client.generate_response(messages=messages)
-
-    def __display_response(self, response: str):
-        st.subheader("Azure OpenAI Response")
-        st.write(response)
 
     def __convert_uploaded_img_to_base64(self, image: UploadedFile) -> str:
         """
@@ -96,17 +123,17 @@ if __name__ == "__main__":
 
 
 # def landing_page(openai_client):
-    # upload_image_sidebar()
-    # upload_image_drag_drop()
+# upload_image_sidebar()
+# upload_image_drag_drop()
 
-    # with st.form("my_form"):
-    #     text = st.text_area(
-    #         "Enter text:",
-    #         "What is the cost of the displayed architecture in the image above?",
-    #     )
-    #     submitted = st.form_submit_button("Submit")
-    #     if submitted:
-    #         generate_response(openai_client, text)
+# with st.form("my_form"):
+#     text = st.text_area(
+#         "Enter text:",
+#         "What is the cost of the displayed architecture in the image above?",
+#     )
+#     submitted = st.form_submit_button("Submit")
+#     if submitted:
+#         generate_response(openai_client, text)
 
 # def upload_image_sidebar():
 #     # Uploads image and displays image
@@ -128,5 +155,3 @@ if __name__ == "__main__":
 #         st.image(display_image, use_container_width=True)
 #     else:
 #        st.write("Let's estimate your architecture. Upload an image in the sidebar.") # can we consider drag and drop interface?
-
-

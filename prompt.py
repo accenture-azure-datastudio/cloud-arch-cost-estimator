@@ -74,14 +74,28 @@ class CostEstimationPrompt:
                     "content": [
                         {
                             "type": "text",
-                            "text": "Based on the cloud services identified, use latest pricing information from cloud service providers, provide a monthly cost estimation based on the identified services and quantities, include any assumptions made for each services in details such as compute options, data volume, token estimation and models. Structure the response in JSON object with the two properties: services and total_estimated_monthly_cost, the services has the properties: Service Name, Assumptions, Quantity, Price Rate and Estimated Monthly Cost. The assumptions property is a string separated by \n for each assumption. The 'Estimated Monthly Cost' property should only include numbers and the british pound symbol",
+                            "text": """Based on the cloud services identified, use latest pricing information from cloud service providers, provide a monthly cost estimation based on the identified services and quantities, include any assumptions made for each services in details such as compute options, data volume, token estimation and models. 
+                            
+                            Generate a markdown structure with the following elements: 
+                            1. A markdown table titled "Estimated Cost" with the properties: Service Name, Assumptions, Quantity, Price Rate and Estimated Monthly Cost. The assumptions property is a string separated by \n for each assumption. The 'Estimated Monthly Cost' property should only include numbers and the british pound symbol. The Price Rate should be clearly stated as how much cost per unit/duration.
+                            2. A text that states "Total estimated monthly cost is total_estimated_cost", where total_estimated_cost is the total of the Estimated Monthly Cost for all the services.
+
+                            The output should only contain the items from markdown structure and should not deviate from the structure. The markdown should look like this:
+
+                            ## Estimated Cost
+
+                            | Service Name | Assumptions | Quantity | Price Rate | Estimated Monthly Cost |
+                            |--------------|-------------|----------|------------|------------------------|
+
+                            Total estimated monthly cost is total_estimated_cost
+                            """,
                         }
                     ],
                 },
             ]
         )
         self.cost_estimation_prompt = cost_estimation_prompt
-        response_format = {"type": "json_object"}
+        response_format = None
         return self.cost_estimation_prompt, response_format
 
 

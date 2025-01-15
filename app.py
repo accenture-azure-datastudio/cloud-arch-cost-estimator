@@ -1,9 +1,7 @@
 import base64
-import json
 import os
 from typing import Any, Dict, List
 
-import pandas as pd
 import streamlit as st
 from PIL import Image
 from streamlit.runtime.uploaded_file_manager import UploadedFile
@@ -27,7 +25,14 @@ class CostEstimatorApp:
         st.title("Cost Estimator")
         menu()
         self.__show_sidebar()
-        self.__upload_arch_diagram()
+
+        # initialise chat history
+        if "messages" not in st.session_state:
+            st.session_state.messages = []
+
+        uploaded_file_status = self.__upload_arch_diagram()
+        if uploaded_file_status:
+            self.__show_chat()
 
     def __show_sidebar(self):
         st.sidebar.header("Configure your architecture")
@@ -44,17 +49,38 @@ class CostEstimatorApp:
             "Upload your architecture diagram and I will estimate the implementation cost.",
             type=["png", "jpg"],
         )
-        if uploaded_file is not None:
+        uploaded_file_status = uploaded_file is not None
+        if uploaded_file_status:
             st.write(
                 "You uploaded the image below. Let's estimate the cost of this architecture."
             )
             self.__display_image(uploaded_file=uploaded_file)
-            response_list = self.__estimate_cost(image=uploaded_file)
-            self.__display_response(response_list)
+            self.__estimate_cost(image=uploaded_file)
         else:
             st.warning(
                 "Upload an image to get started."
             )  # can we consider drag and drop interface? => implemented in the menu.py
+        return uploaded_file_status
+
+    def __show_chat(self):
+        if prompt := st.chat_input("Provide your feedback"):
+            # Add user message to chat history
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            # Display user message in chat message container
+            with st.chat_message("user"):
+                st.markdown(prompt)
+
+            # Display assistant response in chat message container
+            with st.chat_message("assistant"):
+                stream = self.openai_client.generate_response(
+                    messages=[
+                        {"role": m["role"], "content": m["content"]}
+                        for m in st.session_state.messages
+                    ],
+                    stream=True,
+                )
+                response = st.write_stream(stream)
+            st.session_state.messages.append({"role": "assistant", "content": response})
 
     def __display_image(self, uploaded_file: UploadedFile):
         display_image = Image.open(uploaded_file)
@@ -80,20 +106,12 @@ class CostEstimatorApp:
             messages=cost_estimation_prompt,
             response_format=cost_estimation_response_format,
         )
-        cost_estimation_df, total_estimated_cost_response = (
-            self.__format_cost_estimation_response(cost_estimation_response)
-        )
-        return [cost_estimation_df, total_estimated_cost_response]
 
-    def __format_cost_estimation_response(self, json_str) -> pd.DataFrame:
-        json_dict = json.loads(json_str)
-        services_dict = json_dict["services"]
-        total_estimated_cost = json_dict["total_estimated_monthly_cost"]
-        total_estimated_cost_response = (
-            f"Total estimated monthly cost is {total_estimated_cost}"
+        st.session_state.messages.append(
+            {"role": "assistant", "content": cost_estimation_response}
         )
-        df = pd.DataFrame.from_records(services_dict)
-        return df, total_estimated_cost_response
+        with st.chat_message("assistant"):
+            st.markdown(cost_estimation_response)
 
     def __generate_response(
         self, messages: List[Dict[str, Any]], response_format=None
@@ -101,11 +119,6 @@ class CostEstimatorApp:
         return self.openai_client.generate_response(
             messages=messages, response_format=response_format
         )
-
-    def __display_response(self, response_list: List[Any]):
-        st.subheader("Estimated Cost")
-        for response in response_list:
-            st.write(response)
 
     def __convert_uploaded_img_to_base64(self, image: UploadedFile) -> str:
         """
