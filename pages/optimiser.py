@@ -95,6 +95,7 @@ class OptimiserApp:
         )
         optimisation_response = self.__generate_response(messages=optimisation_prompt)
 
+        st.session_state.messages = st.session_state.messages + optimisation_prompt
         st.session_state.messages.append(
             {"role": "assistant", "content": optimisation_response}
         )

@@ -107,6 +107,7 @@ class CostEstimatorApp:
             response_format=cost_estimation_response_format,
         )
 
+        st.session_state.messages = st.session_state.messages + cost_estimation_prompt
         st.session_state.messages.append(
             {"role": "assistant", "content": cost_estimation_response}
         )
